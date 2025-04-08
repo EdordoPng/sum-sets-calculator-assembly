@@ -1,43 +1,83 @@
-# sum-sets-calculator-assembly
-This MIPS assembly program calculates the minimum and maximum sums from sets of numbers.
-
 # MIPS Assembly - Sum Sets Calculator
 
-## Description
-This MIPS assembly program calculates the minimum and maximum sums from sets of numbers. The program asks the user to input a series of numbers (terminated by entering 0). It then calculates:
+![MIPS Logo](https://img.shields.io/badge/MIPS-Assembly-blue)
+![Status](https://img.shields.io/badge/Status-Completed-brightgreen)
 
-1. The maximum sum - formed by adding all numbers except the smallest one
-2. The minimum sum - formed by adding all numbers except the largest one
+A MIPS assembly program that calculates the minimum and maximum possible sums from a set of user-provided numbers by selectively excluding one number at a time.
 
-Each sum set differs from the others as it excludes one number from the total sum, with the excluded number varying between sets.
+## 📋 Table of Contents
+- [Description](#description)
+- [Algorithm Explanation](#algorithm-explanation)
+- [Overflow Handling](#overflow-handling)
+- [Technical Details](#technical-details)
+- [Usage Instructions](#usage-instructions)
+- [Example Output](#example-output)
+- [Register Usage](#register-usage)
 
-## How It Works
-1. The user enters numbers one by one, inputting 0 to end the input phase
-2. The program tracks the minimum and maximum numbers entered
-3. It calculates the total sum of all numbers
-4. The minimum sum = (total sum - maximum number)
-5. The maximum sum = (total sum - minimum number)
-6. The program displays both results along with the respective discarded numbers
+## 📝 Description
 
-## Overflow Handling
-The program includes logic to detect arithmetic overflow during the summation process and will terminate with an error message if overflow occurs.
+This MIPS assembly program determines the minimum and maximum possible sums from sets of numbers. The user inputs a series of numbers (entering 0 to terminate input), and the program calculates:
 
-## Technical Details
-- Target Architecture: MIPS
-- Memory Layout:
-  - ROM data at 0x10000100
-  - RAM data at 0x10011000
-  - Text segment at 0x400100
+- **Maximum Sum**: The sum of all entered numbers **except** the smallest one
+- **Minimum Sum**: The sum of all entered numbers **except** the largest one
 
-## Usage
-Load this program in a MIPS simulator (like MARS, SPIM, or QtSPIM) and run it. Follow the prompts to enter your numbers.
+In mathematical terms, if you have entered _n_ numbers, the program calculates _n_ different possible sums, each excluding one number, and finds the minimum and maximum among these sums.
 
-```
-Enter a number, 0 to start computation:
-[Enter your numbers, one at a time, finishing with 0]
-```
+## 🧮 Algorithm Explanation
 
-## Example Output
+The algorithm works through these steps:
+
+1. **Input Phase**: 
+   - User enters numbers one by one
+   - Input terminates when the user enters 0
+   - During input, the program keeps track of:
+     - The smallest number entered
+     - The largest number entered
+     - The running sum of all numbers
+
+2. **Calculation Phase**:
+   - **Minimum Sum** = (Total Sum) - (Maximum Number)
+   - **Maximum Sum** = (Total Sum) - (Minimum Number)
+
+3. **Output Phase**:
+   - The program displays:
+     - The minimum sum and the number excluded to obtain it
+     - The maximum sum and the number excluded to obtain it
+
+## ⚠️ Overflow Handling
+
+The program implements logic to detect arithmetic overflow during the summation process. If an overflow occurs:
+
+- The program will immediately terminate
+- An error message will be displayed: "The program has encountered overflow. END"
+- This prevents incorrect results due to binary addition limitations
+
+## 🔧 Technical Details
+
+- **Target Architecture**: MIPS
+- **Memory Layout**:
+  - ROM data segment: `0x10000100`
+  - RAM data segment: `0x10011000`
+  - Text segment: `0x400100`
+- **Compatible Simulators**:
+  - MARS (MIPS Assembler and Runtime Simulator)
+  - SPIM
+  - QtSPIM
+
+## 🚀 Usage Instructions
+
+1. Load the program into a MIPS simulator (MARS, SPIM, or QtSPIM)
+2. Run the program
+3. Follow the prompts to enter your numbers:
+   ```
+   Enter a number, 0 to start computation:
+   ```
+4. Enter each number followed by Enter
+5. Enter 0 when you're done inputting numbers
+6. The program will display the results
+
+## 📊 Example Output
+
 ```
 Enter a number, 0 to start computation:
 5
@@ -53,3 +93,17 @@ The maximum sum is = 25
 The discarded number is: 5
 Program terminating.
 ```
+
+## 📋 Register Usage
+
+| Register | Purpose |
+|----------|---------|
+| `$s0` | Starting address of max/min constants in ROM |
+| `$s1` | Temporary storage for currently read data |
+| `$s2` | Minimum value entered (initialized to max representable) |
+| `$s3` | Maximum value entered (initialized to min representable) |
+| `$s4` | Running total sum of all entered numbers |
+| `$t0` | Used for overflow detection comparisons |
+| `$t1` | Used for storing sign in overflow checks |
+| `$t2` | Storage for the maximum sum result |
+| `$t3` | Storage for the minimum sum result |
