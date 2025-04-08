@@ -1,0 +1,216 @@
+# Programma per la ricerca del risultato minimo e massimo tra n insemi di 
+# numeri costituiti ogniuno dalla somma di n-1 numeri, dove n è il numero  di
+# cifre inserite a piacimento dall'utente.
+# Ogni insieme è diverso dall'altro poichè formato dalla somma di tutti i numeri 
+# a meno di uno che vien scartato.
+# Il numero scartato varia da insieme ad insieme.
+# (Se n=5, ho 5 insiemi di 4 elementi) 
+
+
+#inizializzazione delle stringhe da usare per la stampa finale e le costanti
+
+.data 0x10000100 #Memoria dedicata alla ROM
+	str0:	.asciiz	"Inserisci un numero, 0 per iniziare la computazione: "
+	str1a:	.asciiz	"La somma minima vale = "
+	str1b:	.asciiz	"La somma massima vale = "
+	str2:	.asciiz	"Il numero scartato è: "
+	strFin: .asciiz	"Il programma termina. "
+	strOverflow: .asciiz	"Il programma ha riscontrato overflow. FINE "
+	n1:	.asciiz	"\n"                
+	inizializza:	.word 0x7fffffff  #max rappresentabile in complemento a 2 
+			.word 0xffffffff  #min rappresentabile in complemento a 2 
+			  
+
+.data 0x10011000 #memoria dedicata alla RAM
+	risul:	.space	100	#Dimensione allocata
+
+	
+# Main program
+# $s0 indirizzo partenza dei dati max e min salvati nella ROM come costanti, ossia indirizzo dell'etichetta inizializza
+# $s1 salvataggio del dato letto momentaneamente
+# $s2 è la variabile che assumerà il valore minimo inserito (è inizializzata al massimo rappresentabile)
+# $s3 è la variabile che assumerà il valore massimo inserito (è inizializzata al minimo rappresentabile)
+# $s4 sommatoria di tutti i numeri inseriti dall'utente
+
+# $t0 per l'esito di confronti relativi all' overflow
+# $t1 per contenere il segno nel check overflow
+# $t2 per contenere la somma massima
+# $t3 per contenere la somma minima
+
+	
+
+.text	0x400100  #inizio di questo testo in memoria
+
+__start: 
+	#metto il valore massimo nel minimo e viceversa, così son sicuro di poterli agiornare correttamente
+	
+	la $s0, inizializza
+	
+	lw $s2, 0($s0)  #valore max nella variabile minimo
+	lw $s3, 4($s0)	#valore min nella variabile max
+	
+	xor $s4, $s4, $s4	#azzero il registro
+ 
+	jal cicloLettura
+
+	#----il programma termina la fase di lettura ed inizia la computazione----
+
+		#CALCOLA SOMMA MINIMA
+	
+	#SOMMATORIA - MASSIMO
+	sub $t3, $s4, $s3
+	
+	#stampa scritta
+	li $v0, 4
+	la $a0, str1a
+	syscall 
+	
+	#stampa somma minima
+	li $v0, 1
+	move $a0, $t3
+	syscall
+
+	#stampa scritta a capo (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+	#stampa scritta numero scartato
+	li $v0, 4
+	la $a0, str2
+	syscall 
+	
+	#stampa numero scartato
+	li $v0, 1
+	move $a0, $s3
+	syscall
+	
+	#stampa scritta a capo (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+
+		#CALCOLA SOMMA MASSIMA
+	
+	#SOMMATORIA - MINIMO
+	sub $t2, $s4, $s2
+	
+	#stampa scritta
+	li $v0, 4
+	la $a0, str1b
+	syscall 
+
+	#stampa somma massima
+	li $v0, 1
+	move $a0, $t2
+	syscall
+	
+	#stampa scritta a capo (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+	#stampa scritta numero scartato
+	li $v0, 4
+	la $a0, str2
+	syscall 
+	
+	#stampa numero scartato
+	li $v0, 1
+	move $a0, $s2
+	syscall
+	
+	#stampa scritta a capo (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+
+	#----il ptogramma termina----
+	
+	#stampa scritta di terminazione
+	li $v0, 4
+	la $a0, strFin
+	syscall 
+	
+	#exit
+	li $v0, 10
+	syscall
+
+cicloLettura:
+
+	#stampa scritta 
+	li $v0, 4
+	la $a0, str0
+	syscall  
+
+	#stampa scritta a capo (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall  
+
+	#leggi numero da tastiera
+	li $v0, 5
+	syscall
+	
+	#il dato letto prende il posto del 5 in v0
+		
+	move $s1, $v0
+	
+	#controllo se il numero letto è zero,se il confronto non è soddisfatto ed effettuo il salto a controlloMax. Se s1, ossia il numero letto è 0, allora termino il ciclo di lettura
+	
+	bne $s1, $zero, controlloMax
+
+	jr $ra
+
+controlloMax:
+	#Controllo se il num letto è maggiore del max attuale
+
+	blt $s1, $s3, controlloMin 	#se il numero letto è maggiore del massimo in quel momento, allora aggiorno. Altrimenti salto 
+	move $s3, $s1			
+	j controlloMin
+
+controlloMin:
+	#Controllo se il num letto è minore del min attuale
+
+	blt $s2, $s1, checkOverflow
+	move $s2, $s1
+	j checkOverflow
+
+checkOverflow:	
+	#Controllo se si è verificato overflow - dati S1 (dato inserito dall'utente) e S4 (sommatoria)
+	
+	addu $t0, $s1, $s4
+	xor $t1, $s1, $s4
+	blt $t1, $zero, aggiorna		#(salta al ciclo se non si è verificato overflow) potrebbe dar problemi se risulta essere troppo lontana questa etichetta
+
+	xor $t1, $t0, $s4
+	blt $t1, $zero, overflow 
+
+aggiorna: 					#mi permette di ricominciare il ciclo, aggiorno correttamente il valore della sommatoria (s4) dopo che ho constatato che non si verifichi overflow
+	addu $s4, $s4, $s1
+	j cicloLettura
+	
+overflow: 
+	#stampa scritta 
+	li $v0, 4
+	la $a0, strOverflow
+	syscall  
+
+	j errore
+	
+errore:
+	li $a0, 10	#syscall = 10 ---> exit (il programma termina ed il controllo è restituito al programmatre)
+	li $v0, 4
+	syscall  
+	
+
+
+
+
+
+
+
+
+

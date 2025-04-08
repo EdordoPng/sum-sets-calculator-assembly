@@ -1,0 +1,206 @@
+# Program to find the minimum and maximum result among n sets of
+# numbers, each consisting of the sum of n-1 numbers, where n is the number of
+# digits entered by the user.
+# Each set differs from the others as it is formed by the sum of all numbers
+# minus one that is discarded.
+# The discarded number varies from set to set.
+# (If n=5, I have 5 sets of 4 elements)
+
+
+# initialization of strings to use for final printing and constants
+
+.data 0x10000100 # Memory dedicated to ROM
+	str0:	.asciiz	"Enter a number, 0 to start computation: "
+	str1a:	.asciiz	"The minimum sum is = "
+	str1b:	.asciiz	"The maximum sum is = "
+	str2:	.asciiz	"The discarded number is: "
+	strFin: .asciiz	"Program terminating. "
+	strOverflow: .asciiz	"The program has encountered overflow. END "
+	n1:	.asciiz	"\n"                
+	inizializza:	.word 0x7fffffff  # max representable in two's complement 
+			.word 0xffffffff  # min representable in two's complement 
+			  
+
+.data 0x10011000 # memory dedicated to RAM
+	risul:	.space	100	# Allocated size
+
+	
+# Main program
+# $s0 starting address of max and min data saved in ROM as constants, i.e., address of the inizializza label
+# $s1 temporary storage of currently read data
+# $s2 is the variable that will take the minimum value entered (initialized to the maximum representable)
+# $s3 is the variable that will take the maximum value entered (initialized to the minimum representable)
+# $s4 sum of all numbers entered by the user
+
+# $t0 for the result of comparisons related to overflow
+# $t1 for containing the sign in the overflow check
+# $t2 for containing the maximum sum
+# $t3 for containing the minimum sum
+
+	
+
+.text	0x400100  # beginning of this text in memory
+
+__start: 
+	# put the maximum value in the minimum and vice versa, so I'm sure to be able to update them correctly
+	
+	la $s0, inizializza
+	
+	lw $s2, 0($s0)  # max value in the minimum variable
+	lw $s3, 4($s0)	# min value in the maximum variable
+	
+	xor $s4, $s4, $s4	# clear the register
+ 
+	jal cicloLettura
+
+	# ----the program ends the reading phase and begins computation----
+
+		# CALCULATE MINIMUM SUM
+	
+	# SUM - MAXIMUM
+	sub $t3, $s4, $s3
+	
+	# print text
+	li $v0, 4
+	la $a0, str1a
+	syscall 
+	
+	# print minimum sum
+	li $v0, 1
+	move $a0, $t3
+	syscall
+
+	# print newline (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+	# print discarded number text
+	li $v0, 4
+	la $a0, str2
+	syscall 
+	
+	# print discarded number
+	li $v0, 1
+	move $a0, $s3
+	syscall
+	
+	# print newline (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+
+		# CALCULATE MAXIMUM SUM
+	
+	# SUM - MINIMUM
+	sub $t2, $s4, $s2
+	
+	# print text
+	li $v0, 4
+	la $a0, str1b
+	syscall 
+
+	# print maximum sum
+	li $v0, 1
+	move $a0, $t2
+	syscall
+	
+	# print newline (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+	# print discarded number text
+	li $v0, 4
+	la $a0, str2
+	syscall 
+	
+	# print discarded number
+	li $v0, 1
+	move $a0, $s2
+	syscall
+	
+	# print newline (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall 
+
+
+	# ----the program terminates----
+	
+	# print termination text
+	li $v0, 4
+	la $a0, strFin
+	syscall 
+	
+	# exit
+	li $v0, 10
+	syscall
+
+readingCycle:
+
+	# print text 
+	li $v0, 4
+	la $a0, str0
+	syscall  
+
+	# print newline (/n)
+	li $v0, 4
+	la $a0, n1
+	syscall  
+
+	# read number from keyboard
+	li $v0, 5
+	syscall
+	
+	# the read data takes the place of 5 in v0
+		
+	move $s1, $v0
+	
+	# check if the read number is zero, if the comparison is not satisfied and make the jump to controlloMax. If s1, i.e., the read number is 0, then end the reading cycle
+	
+	bne $s1, $zero, controlloMax
+
+	jr $ra
+
+controlloMax:
+	# Check if the read number is greater than the current max
+
+	blt $s1, $s3, controlloMin 	# if the read number is greater than the current maximum, then update. Otherwise skip 
+	move $s3, $s1			
+	j controlloMin
+
+controlloMin:
+	# Check if the read number is less than the current min
+
+	blt $s2, $s1, checkOverflow
+	move $s2, $s1
+	j checkOverflow
+
+checkOverflow:	
+	# Check if overflow has occurred - given S1 (data entered by the user) and S4 (sum)
+	
+	addu $t0, $s1, $s4
+	xor $t1, $s1, $s4
+	blt $t1, $zero, update		# (skip to cycle if overflow didn't occur) might cause problems if this label is too far
+
+	xor $t1, $t0, $s4
+	blt $t1, $zero, overflow 
+
+update: 					# allows me to restart the cycle, correctly update the value of the sum (s4) after I've established that overflow doesn't occur
+	addu $s4, $s4, $s1
+	j cicloLettura
+	
+overflow: 
+	# print text 
+	li $v0, 4
+	la $a0, strOverflow
+	syscall  
+
+	j errore
+	
+error:
+	li $a0, 10	# syscall = 10 ---> exit (the program terminates and control is returned to the programmer)
+	li $v0, 4
+	syscall
